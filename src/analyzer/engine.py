@@ -8,6 +8,7 @@ from typing import Any, Dict, List
 from openai import AsyncOpenAI
 
 from src.collectors import CryptoCollector, NewsCollector, StockCollector
+from src.collectors.policy_collector import PolicyCollector
 from src.config import Config
 
 
@@ -17,6 +18,7 @@ class MarketAnalyzer:
         self.stock_collector = StockCollector([s.model_dump() for s in config.markets.stocks])
         self.crypto_collector = CryptoCollector([c.model_dump() for c in config.markets.crypto])
         self.news_collector = NewsCollector(config.news.model_dump())
+        self.policy_collector = PolicyCollector(config.news.model_dump())
         self._init_llm_client()
 
     def _init_llm_client(self):
@@ -54,6 +56,8 @@ class MarketAnalyzer:
             tasks.append(("crypto", self.crypto_collector.collect()))
         if market in ["all", "news"]:
             tasks.append(("news", self.news_collector.collect()))
+        if market in ["all", "policy"]:
+            tasks.append(("policy", self.policy_collector.collect()))
 
         for name, coro in tasks:
             try:
@@ -70,29 +74,41 @@ class MarketAnalyzer:
         stocks = data.get("stocks", [])
         crypto = data.get("crypto", [])
         news = data.get("news", [])
+        policy = data.get("policy", [])
 
         stock_data = self.stock_collector.format_for_llm(stocks)
         crypto_data = self.crypto_collector.format_for_llm(crypto)
         news_data = self.news_collector.format_for_llm(news)
+        policy_data = self.policy_collector.format_for_llm(policy)
         keywords = self.news_collector.get_keywords_trends(news)
+        policy_keywords = self.policy_collector.get_important_keywords(policy)
 
-        prompt = self._build_analysis_prompt(stock_data, crypto_data, news_data, keywords)
+        prompt = self._build_analysis_prompt(
+            stock_data, crypto_data, news_data, policy_data, keywords, policy_keywords
+        )
 
         report = await self._generate_report(prompt)
 
         return {
             "timestamp": datetime.now().isoformat(),
-            "summary": self._generate_summary(stocks, crypto, keywords),
+            "summary": self._generate_summary(stocks, crypto, keywords, policy_keywords),
             "report": report,
             "data": {
                 "stocks": [dp.content for dp in stocks],
                 "crypto": [dp.content for dp in crypto],
                 "news_keywords": keywords,
+                "policy_keywords": policy_keywords,
             },
         }
 
     def _build_analysis_prompt(
-        self, stock_data: str, crypto_data: str, news_data: str, keywords: dict
+        self,
+        stock_data: str,
+        crypto_data: str,
+        news_data: str,
+        policy_data: str,
+        keywords: Dict,
+        policy_keywords: Dict,
     ) -> str:
         return f"""你是一个专业的金融市场分析师。请基于以下数据进行分析，预测市场波动趋势。
 
@@ -105,8 +121,13 @@ class MarketAnalyzer:
 ## 最新财经新闻
 {news_data}
 
+{policy_data}
+
 ## 新闻关键词趋势
 {", ".join([f"{k}({v})" for k, v in list(keywords.items())[:10]])}
+
+## 政策关键词
+{", ".join([f"{k}({v})" for k, v in list(policy_keywords.items())[:10]])}
 
 请提供以下分析:
 1. **市场概况**: 当前市场整体表现
@@ -137,7 +158,9 @@ class MarketAnalyzer:
         except Exception as e:
             return f"[LLM Analysis Error]\nFailed to generate report: {e}\n\nPrompt:\n{prompt}"
 
-    def _generate_summary(self, stocks: List, crypto: List, keywords: Dict) -> str:
+    def _generate_summary(
+        self, stocks: List, crypto: List, keywords: Dict, policy_keywords: Dict = None
+    ) -> str:
         lines = ["📊 Market Snapshot"]
 
         if stocks:
@@ -153,6 +176,10 @@ class MarketAnalyzer:
         if keywords:
             top_keywords = list(keywords.keys())[:5]
             lines.append(f"📰 Hot topics: {', '.join(top_keywords)}")
+
+        if policy_keywords:
+            top_policy = list(policy_keywords.keys())[:3]
+            lines.append(f"🏛️ Policy: {', '.join(top_policy)}")
 
         return "\n".join(lines)
 

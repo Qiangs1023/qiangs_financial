@@ -25,6 +25,37 @@ news:
     - name: "华尔街见闻"
       url: "https://wallstreetcn.com/feed"
       category: "市场"
+    - name: "路透社中文"
+      url: "https://cn.reuters.com/rssFeed/topNews"
+      category: "国际财经"
+    - name: "新华网财经"
+      url: "http://www.xinhuanet.com/finance/news_finance.xml"
+      category: "官方财经"
+    - name: "证券时报"
+      url: "https://www.stcn.com/rss/news.xml"
+      category: "A股"
+    - name: "第一财经"
+      url: "https://www.yicai.com/rss/news.xml"
+      category: "财经综合"
+    - name: "中国证券报"
+      url: "https://www.cs.com.cn/rss/"
+      category: "证券市场"
+    - name: "东方财富"
+      url: "https://www.eastmoney.com/rss/feed.xml"
+      category: "A股"
+  crawlers:
+    - name: "央行公告"
+      type: "pbc"
+      enabled: true
+    - name: "公开市场操作"
+      type: "pbc_open_market"
+      enabled: true
+    - name: "证监会公告"
+      type: "csrc"
+      enabled: true
+    - name: "发改委公告"
+      type: "ndrc"
+      enabled: true
   twitter:
     enabled: false
     accounts:
