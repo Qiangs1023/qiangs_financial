@@ -1,0 +1,44 @@
+[project]
+name = "finpulse"
+version = "0.1.0"
+description = "Financial market monitoring and prediction system"
+readme = "README.md"
+requires-python = ">=3.9"
+dependencies = [
+    "akshare>=1.12.0",
+    "yfinance>=0.2.0",
+    "ccxt>=4.0.0",
+    "feedparser>=6.0.0",
+    "httpx>=0.25.0",
+    "apscheduler>=3.10.0",
+    "typer>=0.9.0",
+    "pydantic>=2.0.0",
+    "pydantic-settings>=2.0.0",
+    "python-dotenv>=1.0.0",
+    "rich>=13.0.0",
+    "openai>=1.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.0",
+    "pytest-asyncio>=0.21.0",
+    "ruff>=0.1.0",
+]
+
+[project.scripts]
+finpulse = "src.cli:app"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py39"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP"]

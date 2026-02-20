@@ -1,0 +1,38 @@
+name: FinPulse Market Analysis
+
+on:
+  schedule:
+    - cron: '0 * * * *'      # 每小时运行一次
+    - cron: '0 8 * * 1-5'    # 工作日早8点
+  workflow_dispatch:          # 手动触发
+
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e .
+      
+      - name: Create .env file
+        run: |
+          echo "DEEPSEEK_API_KEY=${{ secrets.DEEPSEEK_API_KEY }}" >> .env
+          echo "TELEGRAM_BOT_TOKEN=${{ secrets.TELEGRAM_BOT_TOKEN }}" >> .env
+          echo "TELEGRAM_CHAT_ID=${{ secrets.TELEGRAM_CHAT_ID }}" >> .env
+          echo "WECHAT_WEBHOOK=${{ secrets.WECHAT_WEBHOOK }}" >> .env
+      
+      - name: Run analysis
+        run: python -m src.cli analyze
+      
+      - name: Send notification
+        run: python -m src.cli test-notify

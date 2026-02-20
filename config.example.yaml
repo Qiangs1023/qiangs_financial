@@ -1,0 +1,67 @@
+# FinPulse Configuration
+# Copy this file to config.yaml and fill in your values
+
+# Market data configuration
+markets:
+  stocks:
+    - symbol: "000001.SZ"
+      name: "平安银行"
+      market: "a股"
+    - symbol: "AAPL"
+      name: "苹果"
+      market: "美股"
+  crypto:
+    - symbol: "BTC/USDT"
+      exchange: "binance"
+    - symbol: "ETH/USDT"
+      exchange: "binance"
+
+# News and policy sources
+news:
+  rss:
+    - name: "财新网"
+      url: "https://finance.caixin.com/rss"
+      category: "财经"
+    - name: "华尔街见闻"
+      url: "https://wallstreetcn.com/feed"
+      category: "市场"
+  twitter:
+    enabled: false
+    accounts:
+      - "elonmusk"
+      - "federalreserve"
+    bearer_token: "${TWITTER_BEARER_TOKEN}"
+
+# LLM configuration
+llm:
+  provider: "deepseek"
+  model: "deepseek-chat"
+  temperature: 0.3
+  # api_key: "${DEEPSEEK_API_KEY}"  # Or set DEEPSEEK_API_KEY in .env
+
+# Notification configuration
+notifications:
+  telegram:
+    enabled: true
+    bot_token: "${TELEGRAM_BOT_TOKEN}"
+    chat_id: "${TELEGRAM_CHAT_ID}"
+  wechat:
+    enabled: false
+    webhook: "${WECHAT_WEBHOOK}"
+
+# Scheduler configuration
+scheduler:
+  market_snapshot:
+    enabled: true
+    cron: "0 * * * *"      # Every hour
+  daily_report:
+    enabled: true
+    cron: "0 8 * * 1-5"    # Weekdays at 8 AM
+  anomaly_alert:
+    enabled: true
+    cron: "*/5 * * * *"    # Every 5 minutes
+
+# Alert thresholds
+alerts:
+  price_change_percent: 3.0    # Alert on 3% price change
+  volume_multiplier: 2.0        # Alert on 2x average volume
