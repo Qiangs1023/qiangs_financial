@@ -2,9 +2,9 @@ name: FinPulse Market Analysis
 
 on:
   schedule:
-    - cron: '0 * * * *'      # 每小时运行一次
-    - cron: '0 8 * * 1-5'    # 工作日早8点
-  workflow_dispatch:          # 手动触发
+    - cron: '0 * * * *'
+    - cron: '0 8 * * 1-5'
+  workflow_dispatch:
 
 jobs:
   analyze:
@@ -24,15 +24,97 @@ jobs:
           python -m pip install --upgrade pip
           pip install -e .
       
-      - name: Create .env file
+      - name: Create config files
         run: |
-          echo "DEEPSEEK_API_KEY=${{ secrets.DEEPSEEK_API_KEY }}" >> .env
-          echo "TELEGRAM_BOT_TOKEN=${{ secrets.TELEGRAM_BOT_TOKEN }}" >> .env
-          echo "TELEGRAM_CHAT_ID=${{ secrets.TELEGRAM_CHAT_ID }}" >> .env
-          echo "WECHAT_WEBHOOK=${{ secrets.WECHAT_WEBHOOK }}" >> .env
+          cat > .env << EOF
+          DEEPSEEK_API_KEY=${{ secrets.DEEPSEEK_API_KEY }}
+          TELEGRAM_BOT_TOKEN=${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID=${{ secrets.TELEGRAM_CHAT_ID }}
+          WECHAT_WEBHOOK=${{ secrets.WECHAT_WEBHOOK }}
+          EOF
+          
+          cat > config.yaml << EOF
+          markets:
+            stocks:
+              - symbol: "000001.SZ"
+                name: "平安银行"
+                market: "a股"
+              - symbol: "600519.SH"
+                name: "贵州茅台"
+                market: "a股"
+              - symbol: "AAPL"
+                name: "苹果"
+                market: "美股"
+            crypto:
+              - symbol: "BTC/USDT"
+                exchange: "binance"
+              - symbol: "ETH/USDT"
+                exchange: "binance"
+          
+          news:
+            rss:
+              - name: "财新网"
+                url: "https://finance.caixin.com/rss"
+                category: "财经"
+              - name: "华尔街见闻"
+                url: "https://wallstreetcn.com/feed"
+                category: "市场"
+            crawlers: []
+            twitter:
+              enabled: false
+          
+          llm:
+            provider: "deepseek"
+            model: "deepseek-chat"
+            temperature: 0.3
+          
+          notifications:
+            telegram:
+              enabled: true
+              bot_token: "\${TELEGRAM_BOT_TOKEN}"
+              chat_id: "\${TELEGRAM_CHAT_ID}"
+            wechat:
+              enabled: false
+              webhook: ""
+          
+          scheduler:
+            market_snapshot:
+              enabled: true
+              cron: "0 * * * *"
+            daily_report:
+              enabled: true
+              cron: "0 8 * * 1-5"
+            anomaly_alert:
+              enabled: true
+              cron: "*/5 * * * *"
+          
+          alerts:
+            price_change_percent: 3.0
+            volume_multiplier: 2.0
+          EOF
       
-      - name: Run analysis
-        run: python -m src.cli analyze
-      
-      - name: Send notification
-        run: python -m src.cli test-notify
+      - name: Run analysis and send to Telegram
+        run: |
+          python -c "
+          import asyncio
+          from src.config import config
+          from src.analyzer.engine import MarketAnalyzer
+          from src.notifier.dispatcher import NotificationDispatcher
+          
+          async def main():
+              analyzer = MarketAnalyzer(config)
+              result = await analyzer.analyze()
+              
+              print(result['summary'])
+              print(result['report'])
+              
+              notifier = NotificationDispatcher(config.notifications)
+              message = f\"\"\"{result['summary']}
+
+          {result['report']}\"\"\"
+              
+              results = notifier.send_all(message)
+              print(f'Telegram result: {results}')
+          
+          asyncio.run(main())
+          "
